@@ -1,0 +1,16 @@
+SELECT destination,
+time, 
+age,
+AVG(temperature),
+SUM(temperature),
+COUNT(temperature),
+COUNT(DISTINCT temperature)
+
+FROM dataset_1
+WHERE time != '10PM'
+GROUP BY destination, time
+--HAVING time = '10AM'
+ORDER BY time;
+
+SELECT * 
+FROM table_to_join

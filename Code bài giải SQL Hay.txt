@@ -1,0 +1,248 @@
+Pass MYSQL Shell: anhtuan0702
+
+Problem: User By Average Sesstion Time
+URL: https://platform.stratascratch.com/coding/2088-seat-availability?code_type=1
+Code: (MySQL)
+Cách 1:
+
+with 
+    page_load as 
+        (select user_id, Date(timestamp) as Date, MAX(DATE_FORMAT(timestamp,'%H:%i:%s')) as load_time
+        from facebook_web_log
+        WHERE action = "page_load"
+        GROUP BY user_id, Date
+        Order By user_id),
+    page_exit as 
+        (select user_id, Date(timestamp) as Date, MIN(DATE_FORMAT(timestamp,'%H:%i:%s')) as exit_time
+        from facebook_web_log
+        WHERE action = "page_exit"
+        GROUP BY user_id, Date
+        Order By user_id)   
+Select PL.user_id,  TIME_TO_SEC(TIMEDIFF(exit_time , load_time )) as session_time, AVG(TIME_TO_SEC(TIMEDIFF(exit_time , load_time )))
+FROM page_load PL
+JOIN page_exit PE
+    ON PL.user_id = PE.user_id
+    AND PL.Date = PE.Date
+    AND PE.exit_time > PL.load_time
+GROUP BY PL.user_id
+   
+Cách 2:
+
+WITH edited_data as 
+        (Select PL.user_id, PL.Date(timestamp) as Date, 
+        MAX(DATE_FORMAT(PL.timestamp,'%H:%i:%s')) as load_time,
+        MIN(DATE_FORMAT(PE.timestamp,'%H:%i:%s')) as exit_time
+        FROM facebook_web_log PL
+        INNER JOIN facebook_web_log PE
+            ON PL.user_id = PE.user_id
+            AND PL.Date = PE.Date
+            AND PE.exit_time > PL.load_time
+        WHERE PL.action = "page_load"
+        AND PE.action = "page_exit"
+        GROUP BY PL.user_id, PL.Date
+        Order By PL.user_id)
+SELECT *
+FROM edited_data
+
+
+Web: LeetCode
+URL: https://leetcode.com/problems/trips-and-users/
+MY SQL
+# Write your MySQL query statement below
+-- Trim the trips table to have required data
+-- get the total requests per day
+-- get the total cancelled per day
+-- divide
+
+with data as 
+    (select status, request_at 
+    from trips t
+    where date_format(request_at, "%Y-%m-%d") 
+            between date_format("2013-10-01", "%Y-%m-%d") 
+            and date_format("2013-10-03", "%Y-%m-%d")
+     and exists (Select 1
+                from users u
+                where u.users_id = t.client_id
+                and u.banned = "No")
+     and exists (Select 1
+                from users u
+                where u.users_id = t.driver_id
+                and u.banned = "No")  
+    ),
+    total_requests as 
+        (select request_at, count(status) as no_of_requests
+         from data 
+         group by request_at
+        ),
+    total_cancels as -- Maybe get Null value
+        (select request_at, count(status) as no_of_cancels
+         from data 
+         where status in ("cancelled_by_driver", "cancelled_by_client")
+         group by request_at
+        )
+select tr.request_at as Day,
+round(coalesce(tc.no_of_cancels,0)/tr.no_of_requests,2) as "cancellation rate" 
+from total_requests tr
+left join total_cancels tc
+    on tr.request_at = tc.request_at
+
+
+Web: LeetCode
+URL: https://leetcode.com/problems/reformat-department-table/
+MySQL: Change Row to Column - Pivot Table
+
+Select id
+    ,sum(case when month = 'Jan' Then Revenue Else Null End) As 'Jan_Revenue'
+    ,sum(case when month = 'Feb' Then Revenue Else Null End) As 'Feb_Revenue'
+    ,sum(case when month = 'Mar' Then Revenue Else Null End) As 'Mar_Revenue'
+    ,sum(case when month = 'Apr' Then Revenue Else Null End) As 'Apr_Revenue'
+    ,sum(case when month = 'May' Then Revenue Else Null End) As 'May_Revenue'
+    ,sum(case when month = 'Jun' Then Revenue Else Null End) As 'Jun_Revenue'
+    ,sum(case when month = 'Jul' Then Revenue Else Null End) As 'Jul_Revenue'
+    ,sum(case when month = 'Aug' Then Revenue Else Null End) As 'Aug_Revenue'
+    ,sum(case when month = 'Sep' Then Revenue Else Null End) As 'Sep_Revenue'
+    ,sum(case when month = 'Oct' Then Revenue Else Null End) As 'Oct_Revenue'
+    ,sum(case when month = 'Nov' Then Revenue Else Null End) As 'Nov_Revenue'
+    ,sum(case when month = 'Dec' Then Revenue Else Null End) As 'Dec_Revenue'
+FROM Department
+GROUP BY id;
+
+Web: LeetCode
+URL: https://leetcode.com/problems/department-top-three-salaries/
+MYSQL: Department Top Three Salaries
+
+with data as
+		(select e.*, d.name as Dep
+		from employee_1 e
+		join department_1 d on e.departmentID = d.ID),
+    final_data as
+		(select *,
+        dense_rank () over (partition by Dep Order By Salary DESC) as dra
+        from data )
+select Dep as Department, Name Employee, Salary 
+from final_data fd
+where fd.dra < 4
+
+Web: LeetCode
+URL: https://leetcode.com/problems/department-highest-salary/
+MYSQL: Department Highest Salary
+Cách 1: Đúng
+
+with data as 
+		(select e.*, d.name as dep
+		from employee e
+		join department d
+			on e.departmentID = d.Id),
+	final_data as
+		(select name as Employee, dep, salary,
+		dense_rank() over (partition by dep order by Salary DESC) ra
+        from data)
+select dep as Department, Employee, Salary
+from final_data fd
+where fd.ra = 1
+
+Cách 2: Sai
+select name as Employee,
+dense_rank() over (partition by dep order by Salary DESC) ra
+from (select e.*, d.name as dep
+    from employee_1 e
+    join department_1 d
+        on e.departmentID = d.Id) as x
+where ra = 1
+
+
+Web: Youtube
+URL: https://www.youtube.com/watch?v=8p_OzqIJ_p4&list=PLavw5C92dz9Gvy7yxlV7DEEPNMJdl7efb&index=5
+My SQL: SQL Query to fetch N consecutive records
+
+with t1 as 	
+	(select * ,
+	row_number () over (order by id) as rn,
+	id - (row_number () over (order by id)) as differnce
+	from weather
+	where temperature < 0),
+	t2 as 
+	(select *,
+	count(*) over (partition by differnce) as cons_day
+	from t1 )
+select id, city, temperature, day
+from t2
+where cons_day >= 4 -- >= 4days
+
+Web: Youtube techTFQ
+URL: https://www.youtube.com/watch?v=XruOBp7yPXU&list=PLavw5C92dz9Gvy7yxlV7DEEPNMJdl7efb&index=4
+PostgreSQL: Identify the sport which was played in all summer olympics.
+
+with t1 as
+	(select count(distinct games) as total_games 
+	from olympics_history
+	where season = 'Summer'),
+	t2 as 
+	(select distinct sport, games
+	 from olympics_history
+	 where season = 'Summer' order by games
+	),
+	t3 as
+	(select sport, count(*) as no_of_games
+	 from t2
+	 group by sport
+	)
+select *
+from t3
+join t1
+	on t3.no_of_games = t1.total_games
+
+
+Web: Youtube techTFQ
+URL: https://www.youtube.com/watch?v=XruOBp7yPXU&list=PLavw5C92dz9Gvy7yxlV7DEEPNMJdl7efb&index=4
+PostgreSQL: List down total gold, silver and bronze medals won by each country.
+
+-- create extension tablefunc;
+-- used to get crosstab func
+select country
+, coalesce(Gold,0) as Gold
+, coalesce(Silver,0) as Silver
+, coalesce(Bronze,0) as Bronze
+from crosstab('select nr.region as country, medal, count(1) as total_medal
+			from olympics_history oh
+			join olympics_history_noc_regions nr on oh.noc = nr.noc
+			where medal <> ''NA''
+			group by nr.region, medal
+			order by nr.region, medal',
+			 'values (''Bronze''),(''Gold''),(''Silver'')')
+		as result(country varchar, bronze bigint, gold bigint, silver bigint)
+order by gold DESC, silver DESC, bronze DESC
+
+Web: Youtube techTFQ
+URL: https://www.youtube.com/watch?v=XruOBp7yPXU&list=PLavw5C92dz9Gvy7yxlV7DEEPNMJdl7efb&index=4
+PostgreSQL: Fetch the country which won the most gold, most silver and most bronze medal during each Olympic game.
+
+with temp as 
+	(select substring(country, 1, position('-' in country) - 1) as Season
+	, substring(country, position(' - ' in country) +3) as Country
+	, coalesce(gold, 0) as gold
+	, coalesce(silver, 0) as silver
+	, coalesce(bronze, 0 ) as bronze
+	from crosstab('
+		select  concat(games, '' - '', nr.region) as games_country, medal,  count(1) as total_medal
+		from olympics_history oh
+			join olympics_history_noc_regions nr on oh.noc = nr.noc
+		where medal <> ''NA''
+		group by games, nr.region, medal',
+		'values (''Bronze''), (''Gold''), (''Silver'')')
+		as result(country varchar, bronze bigint, gold bigint, silver bigint)
+	order by country, gold DESC, silver DESC, bronze DESC)
+select distinct season
+, concat(first_value(Country) over(partition by season order by gold DESC) 
+		, ' - '
+		, first_value(gold) over(partition by season order by gold DESC)) as Max_Gold
+, concat(first_value(Country) over(partition by season order by Silver DESC) 
+		, ' - '
+		, first_value(Silver) over(partition by season order by Silver DESC)) as Max_Silver
+, concat(first_value(Country) over(partition by season order by Bronze DESC) 
+		, ' - '
+		, first_value(Bronze) over(partition by season order by Bronze DESC)) as Max_Bronze
+from temp
+order by season;
+
+    
