@@ -311,3 +311,5 @@ where medal <> 'NA'
 group by games, nr.region, sport
 having nr.region = 'India' and sport = 'Hockey'
 order by total_medal DESC
+
+-- question 21
